@@ -11,6 +11,10 @@ router.get('/', function(req, res, next) {
   res.render('index', { title: 'Express' })
 })
 
+router.get('/template', function(req, res, next) {
+  res.render('template')
+})
+
 router.post('/upload', upload.single('file'), function (req, res, next) {
   const file = req.file
   if (util.isZipFile(file)) {
