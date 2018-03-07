@@ -1,6 +1,7 @@
 const express = require('express')
 const fs = require('fs')
 const path = require('path')
+const gameController = require('../controller/game')
 let multer  = require('multer')
 let upload = multer({ dest: 'public/' })
 let util = require('../tools/utils')
@@ -9,10 +10,6 @@ let router = express.Router();
 /* GET home page. */
 router.get('/', function(req, res, next) {
   res.render('index', { title: 'Express' })
-})
-
-router.get('/template', function(req, res, next) {
-  res.render('template')
 })
 
 router.post('/upload', upload.single('file'), function (req, res, next) {
