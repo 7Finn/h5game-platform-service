@@ -1,6 +1,6 @@
 import io from 'socket.io-client'
 import { TYPE_ROLE } from './config'
-import { utils } from './utils'
+import { utils } from './tools/utils'
 let role;
 let socket;
 let token;

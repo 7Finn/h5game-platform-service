@@ -1,16 +1,38 @@
 const express = require('express')
 const fs = require('fs')
 const path = require('path')
-const gameController = require('../controller/game')
+const storeController = require('../controller/store')
 let multer  = require('multer')
 let upload = multer({ dest: 'public/' })
-let util = require('../tools/utils')
+let util = require('../src/tools/utils')
 let router = express.Router();
 
 /* GET home page. */
 router.get('/', function(req, res, next) {
   res.render('index', { title: 'Express' })
 })
+
+let avatarFilePath = 'upload/avatar/'
+let uploadAvatar = multer({ dest: `public/${avatarFilePath}` })
+router.post('/uploadAvatar', uploadAvatar.single('file'), (req, res, next) => {
+  const file = req.file
+  const account = req.body.account
+  const fileType = path.extname(file.originalname);
+  const filePath = file.path + fileType;
+  const fileName = file.filename + fileType;
+  fs.renameSync(file.path, filePath)
+  res.send({ ret: 0, path: `http://localhost:3000/${avatarFilePath}${fileName}` })
+  // req.file 是 `avatar` 文件的信息  
+  // req.body 将具有文本域数据，如果存在的话
+})
+
+router.get('/storeList', (req, res, next) => {
+  res.send({
+    ret: 0,
+    list: storeController.getList()
+  })
+})
+
 
 router.post('/upload', upload.single('file'), function (req, res, next) {
   const file = req.file
