@@ -30,7 +30,7 @@ app.use(webpackDevMiddleware(compiler, {
 
   // public path should be the same with webpack config
   publicPath: webpackDevConfig.output.publicPath,
-  noInfo: true,
+  noInfo: false,
   stats: {
       colors: true
   }
