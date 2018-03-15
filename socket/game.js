@@ -9,11 +9,11 @@ let flag = true;
 
 function parsePlayerInfo(url) {
   const urlParse = URL.parse(url, true);
-  const { gameId, roomId, role, userId } = urlParse.query;
+  const { gameId, roomId, role, account } = urlParse.query;
   return { 
-    gameId: +gameId, 
-    roomId: +roomId, 
-    userId: +userId,
+    gameId: gameId, 
+    roomId: roomId, 
+    account: account,
     role: +role
   };
 }
@@ -23,7 +23,15 @@ module.exports = (io) => {
   gameIo.on('connection', (socket) => {
     console.log('/game.connection')
     let url = socket.request.headers.referer;
-    let { gameId, roomId, role, userId } = parsePlayerInfo(url);
+    let { gameId, roomId, role, account } = parsePlayerInfo(url);
+
+    socket.userData = {
+      gameId,
+      roomId,
+      role,
+      account
+    }
+    
     if (!room[roomId]) {
       room[roomId] = {
         gameId: gameId,
@@ -33,16 +41,16 @@ module.exports = (io) => {
     }
     // 玩家
     if (role === ROLE_MASTER) {
-      room[roomId].masters[userId] = socket;
+      room[roomId].masters[account] = socket;
       socket.join(roomId);
-      socket.join(`${roomId}_${userId}`);
+      socket.join(`${roomId}_${account}`);
       socket.on('token', () => {
         socket.emit('token', { role: ROLE_MASTER });
       })
 
       socket.on('ready', () => {
         console.log('/game.ready')
-        gameIo.to(`${roomId}_${userId}`).emit('start');
+        gameIo.to(`${roomId}_${account}`).emit('start');
       })
 
       socket.on('broadcastData', (msg) => {
@@ -50,18 +58,19 @@ module.exports = (io) => {
       })
 
       socket.on('sendData', (msg) => {
-        if (room[roomId].maps[userId]) {
-          room[roomId].maps[userId].emit(msg.name, msg.data);
+        if (room[roomId].maps[account]) {
+          room[roomId].maps[account].emit(msg.name, msg.data);
         }
       })
 
       socket.on('win', () => {
         gameIo.to(roomId).emit('win');
       })
+
     } else if (role === ROLE_MAP) {
-      room[roomId].maps[userId] = socket;
+      room[roomId].maps[account] = socket;
       socket.join(roomId);
-      socket.join(`${roomId}_${userId}`);
+      socket.join(`${roomId}_${account}`);
       socket.on('token', () => {
         socket.emit('token', { role: ROLE_MAP });
       })

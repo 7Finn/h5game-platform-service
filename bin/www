@@ -23,6 +23,7 @@ mongo.connect(mongourl, (err, client) => {
   let io = require('socket.io')(server);
   let connectSocket = require('../socket/connect');
   let gameSocket = require('../socket/game');
+  let iframeSocket = require('../socket/iframe');
   /**
    * Get port from environment and store in Express.
    */
@@ -32,6 +33,7 @@ mongo.connect(mongourl, (err, client) => {
 
   connectSocket(io, db);
   gameSocket(io, db);
+  iframeSocket(io, db);
 
   /**
    * Listen on provided port, on all network interfaces.

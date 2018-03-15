@@ -97,6 +97,9 @@ module.exports = (db) => {
     approveApplication: (account, targetAccount) => {
       return users.updateOne({ account: account }, { $pull: { applicants: targetAccount }, $addToSet: { friends: targetAccount } })
         .then(result => {
+          return users.updateOne({ account: targetAccount }, { $addToSet: { friends: account } })
+        })
+        .then(result => {
           return { ret: 0 }
         })
         .catch(err => {

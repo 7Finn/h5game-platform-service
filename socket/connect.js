@@ -45,6 +45,9 @@ module.exports = (socketio, db) => {
               .then(res => {
                 res.forEach(friend => {
                   friend.online = onlineUsers.hasOwnProperty(friend.account)
+                  if (friend.online) {
+                    io.to(onlineUsers[friend.account]).emit('friend_online', { account: socket.userData.account })
+                  }
                 })
                 socket.emit('set_friends', res)
               })
@@ -63,6 +66,7 @@ module.exports = (socketio, db) => {
               .then(res => {
                 socket.emit('set_store_games', res)
               })
+            // 通知好友上线
           } else {
             socket.emit('login', {
               ret: res.ret,
@@ -93,6 +97,14 @@ module.exports = (socketio, db) => {
         })
     })
 
+    socket.on('invite', data => {
+      console.log('/connect.invite')
+      const account = data.invitee.account
+      if (onlineUsers.hasOwnProperty(account)) {
+        io.to(onlineUsers[account]).emit('invite_msg', data)
+      }
+    })
+
     socket.on('add_contact', (data) => {
       console.log('/connect.add_contact')
       const { nickname } = data
@@ -105,10 +117,10 @@ module.exports = (socketio, db) => {
             // 如果对方在线，就通知他
             if (onlineUsers.hasOwnProperty(account)) {
               io.to(onlineUsers[account]).emit('has_applicant_msg')
-              usersModel.getApplicants(socket.userData.account)
-              .then(res => {
-                socket.emit('set_applicants', res)
-              })
+              usersModel.getApplicants(account)
+                .then(res => {
+                  io.to(onlineUsers[account]).emit('set_applicants', res)
+                })
             }
           }
         })
@@ -126,7 +138,31 @@ module.exports = (socketio, db) => {
       console.log('/connect.approve_application')
       usersModel.approveApplication(socket.userData.account, data.account)
         .then(res => {
-          socket.emit('approve_application', res)
+          // 刷新自己的好友列表
+          usersModel.getFriends(socket.userData.account)
+            .then(res => {
+              res.forEach(friend => {
+                friend.online = onlineUsers.hasOwnProperty(friend.account)
+              })
+              socket.emit('set_friends', res)
+            })
+          
+          // 刷新自己的申请人列表
+          usersModel.getApplicants(socket.userData.account)
+            .then(res => {
+              socket.emit('set_applicants', res)
+            })
+          
+          // 如果对方在线，刷新对方的好友列表
+          if (onlineUsers.hasOwnProperty(data.account)) {
+            usersModel.getFriends(data.account)
+              .then(res => {
+                res.forEach(friend => {
+                  friend.online = onlineUsers.hasOwnProperty(friend.account)
+                })
+                io.to(onlineUsers[data.account]).emit('set_friends', res)
+              })
+          }
         })
     })
 
@@ -134,7 +170,11 @@ module.exports = (socketio, db) => {
       console.log('/connect.neglect_application')
       usersModel.neglectApplication(socket.userData.account, data.account)
         .then(res => {
-          socket.emit('neglect_application', res)
+          // 刷新自己的申请人列表
+          usersModel.getApplicants(socket.userData.account)
+            .then(res => {
+              socket.emit('set_applicants', res)
+            })
         })
     })
 
@@ -175,18 +215,20 @@ module.exports = (socketio, db) => {
   
     //监听用户退出
     socket.on('disconnect', () => {
-      // console.log('/connect.disconnect')
-      // const account = socket.userData.account
-      // //将退出的用户从在线列表中删除
-      // if (onlineUsers.hasOwnProperty(account)) {
-      //   //删除
-      //   delete onlineUsers[account];
-      //   //在线人数-1
-      //   onlineCount--;
-  
-      //   //向所有客户端广播用户下线
-      //   io.sockets.emit('friend_offline', { account: account });
-      // }
+      console.log('/connect.disconnect')
+      if (socket.userData) {
+        const account = socket.userData.account
+        //将退出的用户从在线列表中删除
+        if (onlineUsers.hasOwnProperty(account)) {
+          //删除
+          delete onlineUsers[account];
+          //在线人数-1
+          onlineCount--;
+    
+          //向所有客户端广播用户下线
+          io.sockets.emit('friend_offline', { account: account });
+        }
+      }
     })
   });
 }

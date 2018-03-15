@@ -6,7 +6,7 @@ module.exports = (db) => {
     getFavorites: (account) => {
       return users.findOne({ account: account })
         .then(result => {
-          if (result) {
+          if (result && result.favorites) {
             return Promise.all(result.favorites.map((gameId => {
               return games.findOne({ game_id: gameId }).then(result => {
                 return { 
