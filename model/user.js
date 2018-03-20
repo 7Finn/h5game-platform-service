@@ -140,6 +140,12 @@ module.exports = (db) => {
         .catch(err => {
           return { ret: -1, user: null }
         })
+    },
+    addFavorite: (account, gameId) => {
+      return users.updateOne({ account: account }, { $addToSet: { favorites: gameId } })
+    },
+    removeFavorite: (account, gameId) => {
+      return users.updateOne({ account: account }, { $pull: { favorites: gameId } })
     }
   }
 }

@@ -3,7 +3,6 @@ function connect() {
 	tsocket.connectSync();
 	tsocket.bindWinEventHandler(function() {
 		console.log('win');
-		alert("You Win!\nThe time you cost is : " + varGroup.time + "\nThe setps you cost is : " + varGroup.stepNum);
     varGroup.isPlaying = false;
     varGroup.time = 0;
     varGroup.stepNum = 0;

@@ -37,6 +37,9 @@ module.exports = (db) => {
           }))
         })
       })
+    },
+    getStoreGamesDetail: (gameId) => {
+      return games.findOne({ game_id: gameId })
     }
   }
 }

@@ -1,7 +1,6 @@
 const express = require('express')
 const fs = require('fs')
 const path = require('path')
-const storeController = require('../controller/store')
 let multer  = require('multer')
 let upload = multer({ dest: 'public/' })
 let util = require('../src/tools/utils')
@@ -24,13 +23,6 @@ router.post('/uploadAvatar', uploadAvatar.single('file'), (req, res, next) => {
   res.send({ ret: 0, path: `http://localhost:3000/${avatarFilePath}${fileName}` })
   // req.file 是 `avatar` 文件的信息  
   // req.body 将具有文本域数据，如果存在的话
-})
-
-router.get('/storeList', (req, res, next) => {
-  res.send({
-    ret: 0,
-    list: storeController.getList()
-  })
 })
 
 

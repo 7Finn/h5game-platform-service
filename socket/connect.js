@@ -1,7 +1,6 @@
 
 //在线用户
 let onlineUsers = {};
-let users = {};
 //当前在线人数
 let onlineCount = 0;
 
@@ -9,6 +8,7 @@ module.exports = (socketio, db) => {
   let io = socketio.of('/connect')
   let usersModel = require('../model/user')(db)
   let gamesModel = require('../model/game')(db)
+  let experienceModel = require('../model/experience')(db)
 
   io.on('connection', (socket) => {
     console.log('/connect.connection')
@@ -212,6 +212,48 @@ module.exports = (socketio, db) => {
           socket.emit('set_store_games', res)
         })
     })
+
+    socket.on('get_store_game_detail', data => {
+      console.log('/connect.get_store_game_detail')
+      const { gameId } = data
+      gamesModel.getStoreGamesDetail(gameId)
+        .then(res => {
+          socket.emit('set_store_game_detail', res)
+        })
+    })
+
+    socket.on('add_to_favorite', data => {
+      console.log('/connect.add_to_favorite')
+      const { gameId } = data
+      usersModel.addFavorite(socket.userData.account, gameId)
+        .then(() => {
+          gamesModel.getFavorites(socket.userData.account)
+            .then(res => {
+              socket.emit('set_favorites', res)
+            })
+        })
+    })
+
+    socket.on('remove_out_favorite', data => {
+      console.log('/connect.remove_out_favorite')
+      const { gameId } = data
+      usersModel.removeFavorite(socket.userData.account, gameId)
+        .then(() => {
+          gamesModel.getFavorites(socket.userData.account)
+            .then(res => {
+              socket.emit('set_favorites', res)
+            })
+        })
+    })
+
+    socket.on('get_experience', data => {
+      console.log('/connect.get_experience')
+      const { gameId } = data
+      experienceModel.getExperience(socket.userData.account, gameId)
+        .then(res => {
+          socket.emit('set_experience', res)
+        })
+    })
   
     //监听用户退出
     socket.on('disconnect', () => {
@@ -226,7 +268,7 @@ module.exports = (socketio, db) => {
           onlineCount--;
     
           //向所有客户端广播用户下线
-          io.sockets.emit('friend_offline', { account: account });
+          // io.sockets.emit('friend_offline', { account: account });
         }
       }
     })
