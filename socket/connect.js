@@ -10,8 +10,11 @@ module.exports = (socketio, db) => {
   let gamesModel = require('../model/game')(db)
   let experienceModel = require('../model/experience')(db)
 
+  
+
   io.on('connection', (socket) => {
     console.log('/connect.connection')
+
     //监听新用户加入
     socket.on('login', (data) => {
       console.log('/connect.login')

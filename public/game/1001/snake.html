@@ -12,18 +12,18 @@
         }
 
         #page {
+            text-align: center;
             margin-right: auto;
             margin-left: auto;
             margin-top: 20px;
-            height: 600px;
-            width: 980px;
         }
 
         #yard {
-            width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+            width: 400px;
             border: 1px solid gray;
             box-shadow: 0 0 10px black;
-            float: right;
         }
 
         #mark {
@@ -45,11 +45,10 @@
     <script src="http://127.0.0.1:3000/public/socket.js"></script>
     <script type="text/javascript">
         tsocket.connectSync();
-        
         //伪常量
         var BLOCK_SIZE = 20;        //格子大小
-        var COLS = 40;                        //列数
-        var ROWS = 30;                        //行数
+        var COLS = 20;                        //列数
+        var ROWS = 20;                        //行数
         //变量
         var snakes = [];                //保存蛇坐标
         var c = null;                        //绘图对象
@@ -149,6 +148,7 @@
         }
         //交互响应函数
         function keydown(keyCode) {
+            console.log('onkeydown', keyCode, Date.now())
             switch (keyCode) {
                 case 37: //左边
                     if (toGo != 1 && toGo != 3) toGo = 1; break;
@@ -175,7 +175,7 @@
         function addFood() {
             var x = Math.floor(Math.random() * (COLS - 1)) * BLOCK_SIZE;
             var y = Math.floor(Math.random() * (ROWS - 1)) * BLOCK_SIZE;
-            tsocket.broadcastDataSync('foodX', { x: x, y: y}, function(data) {
+            tsocket.sendData('foodX', { x: x, y: y}, function(data) {
                 foodX = data.x;
                 foodY = data.y
             })
@@ -185,13 +185,11 @@
         function isDie() {
             if (snakes[snakecount - 1].x == -20 || snakes[snakecount - 1].x == BLOCK_SIZE * COLS
                 || snakes[snakecount - 1].y == -20 || snakes[snakecount - 1].y == BLOCK_SIZE * ROWS) {
-                alert("Game Over!");
                 clearInterval(interval);
             }
             for (var i = 0; i < snakecount - 1; i++) {
                 if (snakes[snakecount - 1].x == snakes[i].x && snakes[snakecount - 1].y == snakes[i].y) {
                     clearInterval(interval);
-                    alert("Game Over!");
                 }
             }
         }
@@ -199,18 +197,23 @@
         window.onload = function () {
             c = document.getElementById('canvas').getContext('2d');
             oMark = document.getElementById('mark_con');
-            start();
-            interval = setInterval(function() {
-                console.log('??')
-                tsocket.broadcastData('move')
-            }, 100);
-            tsocket.bindBroadCastEventHandler('move', move)
-            document.onkeydown = function (event) {
-                var event = event || window.event;
-                tsocket.broadcastData('keydown', event.keyCode)
-                // keydown(event.keyCode);
+            document.getElementById('start').onclick = function() {
+                tsocket.ready();
             }
-            tsocket.bindBroadCastEventHandler('keydown', keydown)
+            tsocket.onStart(function (data) {
+                console.log('start')
+                start();
+                interval = setInterval(function() {
+                    tsocket.emit('move')
+                }, 2000);
+                tsocket.on('move', move)
+                document.onkeydown = function (event) {
+                    var event = event || window.event;
+                    tsocket.emit('keydown', event.keyCode)
+                    // keydown(event.keyCode);
+                }
+                tsocket.on('keydown', keydown)
+            })
         }
     </script>
 </head>
@@ -219,12 +222,13 @@
 
     <div id="page">
         <div id="yard">
-            <canvas id="canvas" height="600px" width="800px"></canvas>
+            <canvas id="canvas" height="400px" width="400px"></canvas>
         </div>
 
         <div id="help">
             <div id="mark">得分：
                 <span id="mark_con"></span>
+                <button id="start">准备</button>
             </div>
         </div>
     </div>

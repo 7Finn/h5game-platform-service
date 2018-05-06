@@ -1,7 +1,7 @@
 
 function connect() {
 	tsocket.connectSync();
-	tsocket.bindWinEventHandler(function() {
+	tsocket.onWin(function() {
 		console.log('win');
     varGroup.isPlaying = false;
     varGroup.time = 0;
@@ -36,7 +36,7 @@ var varGroup = {
 window.onload = function() {
   connect();
 	init();
-	tsocket.bindStartEventHandler(function (data) {
+	tsocket.onStart(function (data) {
     console.log('start');
     startGame();
 	})
@@ -44,7 +44,7 @@ window.onload = function() {
 	varGroup.startButton.onclick = function() {
     tsocket.ready();
   };
-	tsocket.bindBroadCastEventHandler('move', function(data) {
+	tsocket.on('move', function(data) {
 		move(data.id, data.pos);    //添加点击函数
 	});
 	varGroup.difficultyButton.onclick = function() { changeDifficulty(); };
@@ -89,7 +89,7 @@ function changeImage() {
 			imgDiv.id = "pic" + (i + 1) + "-" + (j + 1);
 			imgDiv.value = varGroup.charArr[i*4 + j];
 			imgDiv.onclick = function() {
-				tsocket.broadcastData('move' , { id: this.id, pos: getPos(this.className) });
+				tsocket.emit('move' , { id: this.id, pos: getPos(this.className) });
 			};
 
 			rowArr[j] = imgDiv;					//把imgDiv放到map中，map是二维数组，直接存储对象，位置从0开始
@@ -219,7 +219,7 @@ function random() {
 					if (x < 0)
 					stack.push(temp);
 					//作死代码区-----------------------------
-					tsocket.sendDataSync('random', target, function(data) {
+					tsocket.sendData('random', target, function(data) {
 						swap(data);
 					});
 					// swap(target);

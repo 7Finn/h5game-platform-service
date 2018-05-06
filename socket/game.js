@@ -51,11 +51,11 @@ module.exports = (socketio, db) => {
       // 房间里所有
       socket.join(roomId);
       socket.join(`${roomId}_${account}`);
-      socket.on('token', () => {
-        socket.emit('token', { role: ROLE_MASTER });
+      socket.on('_token', () => {
+        socket.emit('_token', { role: ROLE_MASTER });
       })
 
-      socket.on('ready', () => {
+      socket.on('_ready', () => {
         console.log('/game.ready')
         room[roomId].ready[account] = true;
         iframeIo.to(onlineUsers[account]).emit('start_ready')
@@ -66,6 +66,7 @@ module.exports = (socketio, db) => {
         }
         let timeout = 3000;
         let timer = setInterval(() => {
+          if (!room[roomId]) return
           if (timeout > 0) {
             for (let key in room[roomId].masters) {
               iframeIo.to(onlineUsers[key]).emit('start_count_down', { time: timeout })
@@ -74,7 +75,7 @@ module.exports = (socketio, db) => {
             clearInterval(timer)
             for (let key in room[roomId].masters) {
               iframeIo.to(onlineUsers[key]).emit('start_count_down', { time: timeout })
-              gameIo.to(`${roomId}_${key}`).emit('start');
+              gameIo.to(`${roomId}_${key}`).emit('_start');
             }
           }
           timeout -= 1000;
@@ -82,17 +83,17 @@ module.exports = (socketio, db) => {
         
       })
 
-      socket.on('broadcastData', (msg) => {
-        gameIo.to(roomId).emit(msg.name, msg.data);
+      socket.on('_broadcast_data', (msg) => {
+        gameIo.to(`${roomId}_${account}`).emit(msg.name, msg.data);
       })
 
-      socket.on('sendData', (msg) => {
+      socket.on('_send_data', (msg) => {
         if (room[roomId].maps[account]) {
           room[roomId].maps[account].emit(msg.name, msg.data);
         }
       })
 
-      socket.on('win', data => {
+      socket.on('_platform_win', data => {
         for (let key in room[roomId].masters) {
           if (key === socket.userData.account) {
             iframeIo.to(onlineUsers[key]).emit('game_result', {
@@ -114,8 +115,8 @@ module.exports = (socketio, db) => {
       room[roomId].maps[account] = socket;
       socket.join(roomId);
       socket.join(`${roomId}_${account}`);
-      socket.on('token', () => {
-        socket.emit('token', { role: ROLE_MAP });
+      socket.on('_token', () => {
+        socket.emit('_token', { role: ROLE_MAP });
       })
     }
 
