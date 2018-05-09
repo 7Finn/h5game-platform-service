@@ -6,9 +6,6 @@ const ROOM_MAX_NUMBER = 2;
 let room = {};
 // 在线用户
 let onlineUsers = {};
-// 当前在线人数
-let onlineCount = 0;
-
 
 module.exports = (socketio, db) => {
   let usersModel = require('../model/user')(db)
@@ -58,7 +55,9 @@ module.exports = (socketio, db) => {
       socket.on('_ready', () => {
         console.log('/game.ready')
         room[roomId].ready[account] = true;
-        iframeIo.to(onlineUsers[account]).emit('start_ready')
+        if (onlineUsers[roomId] && onlineUsers[roomId].player[account]) {
+          iframeIo.to(onlineUsers[roomId].player[account]).emit('start_ready')
+        }
         for (let key in room[roomId].masters) {
           if (room[roomId].ready[key] !== true) {
             return;
@@ -69,12 +68,12 @@ module.exports = (socketio, db) => {
           if (!room[roomId]) return
           if (timeout > 0) {
             for (let key in room[roomId].masters) {
-              iframeIo.to(onlineUsers[key]).emit('start_count_down', { time: timeout })
+              iframeIo.to(onlineUsers[roomId].player[key]).emit('start_count_down', { time: timeout })
             }
           } else {
             clearInterval(timer)
             for (let key in room[roomId].masters) {
-              iframeIo.to(onlineUsers[key]).emit('start_count_down', { time: timeout })
+              iframeIo.to(onlineUsers[roomId].player[key]).emit('start_count_down', { time: timeout })
               gameIo.to(`${roomId}_${key}`).emit('_start');
             }
           }
@@ -96,13 +95,13 @@ module.exports = (socketio, db) => {
       socket.on('_platform_win', data => {
         for (let key in room[roomId].masters) {
           if (key === socket.userData.account) {
-            iframeIo.to(onlineUsers[key]).emit('game_result', {
+            iframeIo.to(onlineUsers[roomId].player[key]).emit('game_result', {
               win: true,
               msg: '你赢了'
             })
             experienceModel.addPlayTime(key, room[roomId].gameId, true)
           } else {
-            iframeIo.to(onlineUsers[key]).emit('game_result', {
+            iframeIo.to(onlineUsers[roomId].player[key]).emit('game_result', {
               win: false,
               msg: '你输了'
             })
@@ -121,8 +120,16 @@ module.exports = (socketio, db) => {
     }
 
     socket.on('disconnect', () => {
-      console.log('disconnect');
-      room[roomId] = null;
+      if (role === ROLE_MASTER) {
+        room[roomId].masters[account] = null;
+        room[roomId].ready[account] = false;
+        room[roomId].playerCount = room[roomId].playerCount - 1;
+      } else if (role === ROLE_MAP) {
+        if (room[roomId]) room[roomId].maps[account] = null;
+      }
+      if (room[roomId].playerCount === 0) {
+        room[roomId] = null;
+      }
     })
   });
 
@@ -137,23 +144,38 @@ module.exports = (socketio, db) => {
         player: data.player,
         competitor: data.competitor
       }
+      const roomId = data.roomId,
+            playerAccount = data.player.account,
+            competitorAccount = data.competitor.account;
 
       // 加入房间
-      socket.join(socket.userData.roomId)
+      socket.join(`iframe_${roomId}`)
 
       // 检查在线列表，如果不在里面就加入
-      if (!onlineUsers.hasOwnProperty(socket.userData.player.account)) {
-        onlineUsers[socket.userData.player.account] = socket.id;
-        //在线人数+1
-        onlineCount++;
+      if (!onlineUsers.hasOwnProperty(roomId)) {
+        onlineUsers[roomId] = {
+          player: {},
+          count: 0
+        }
       }
+
+      onlineUsers[roomId].player[playerAccount] = socket.id;
+      onlineUsers[roomId].count++;
 
       // 检查在线列表，如果双方都在，则取消等待
-      if (onlineUsers.hasOwnProperty(socket.userData.competitor.account)) {
-        iframeIo.to(socket.userData.roomId).emit('all_player_in')
+      if (onlineUsers.hasOwnProperty(roomId) && onlineUsers[roomId].count === 2) {
+        iframeIo.to(`iframe_${roomId}`).emit('all_player_in')
       }
-    })
 
+      socket.on('disconnect', () => {
+        delete onlineUsers[roomId].player[playerAccount]
+        onlineUsers[roomId].count--;
+
+        if (onlineUsers[roomId].count === 0) {
+          delete onlineUsers[roomId]
+        }
+      })
+    })
   })
 }
 
